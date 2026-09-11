@@ -37,7 +37,7 @@ const evaluate = async (expression) => {
 }
 
 await evaluate(`new Promise((resolve) => {
-  const button = [...document.querySelectorAll('button')].find((item) => item.textContent.includes('入力例を入れる'));
+  const button = document.querySelector('.example-button');
   button.click();
   setTimeout(resolve, 150);
 })`)
@@ -60,8 +60,23 @@ await evaluate(`new Promise((resolve) => {
 const copiedLabel = await evaluate(`document.querySelector('.copy-button').innerText`)
 if (!copiedLabel.includes('コピーしました')) throw new Error('Copy confirmation was not shown')
 
+await evaluate(`new Promise((resolve) => {
+  document.querySelector('.reset-button').click();
+  setTimeout(resolve, 150);
+})`)
+
+const resetState = await evaluate(`(() => ({
+  progress: document.querySelector('.progress').innerText.replace(/\\s/g, ''),
+  values: [...document.querySelectorAll('textarea')].map((item) => item.value),
+  resetDisabled: document.querySelector('.reset-button').disabled,
+}))()`)
+
+if (resetState.progress !== '00/05') throw new Error(`Unexpected reset progress: ${resetState.progress}`)
+if (resetState.values.some(Boolean)) throw new Error('Reset should clear every field')
+if (!resetState.resetDisabled) throw new Error('Reset button should be disabled after clearing')
+
 const errors = await evaluate(`window.__uiCheckErrors || []`)
 if (errors.length) throw new Error(errors.join('\n'))
 
-console.log('UI check passed: example → prompt generation → copy confirmation')
+console.log('UI check passed: example → prompt generation → copy confirmation → reset')
 socket.close()
