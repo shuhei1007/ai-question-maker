@@ -45,12 +45,13 @@ await evaluate(`new Promise((resolve) => {
 const populated = await evaluate(`(() => ({
   progress: document.querySelector('.progress').innerText.replace(/\\s/g, ''),
   prompt: document.querySelector('.prompt-paper pre').innerText,
-  copyDisabled: document.querySelector('.copy-button').disabled,
+  saved: JSON.parse(localStorage.getItem('kikumon-question-draft-v1')),
 }))()`)
 
 if (populated.progress !== '05/05') throw new Error(`Unexpected progress: ${populated.progress}`)
 if (!populated.prompt.includes('JavaScriptのDOM操作を勉強しています')) throw new Error('Prompt was not generated')
-if (populated.copyDisabled) throw new Error('Copy button should be enabled')
+if (!populated.prompt.includes('質問の目的：エラーを解決')) throw new Error('Selected template was not reflected')
+if (!populated.saved?.form?.code) throw new Error('Draft was not saved to localStorage')
 
 await evaluate(`new Promise((resolve) => {
   document.querySelector('.copy-button').click();
@@ -74,6 +75,9 @@ const resetState = await evaluate(`(() => ({
 if (resetState.progress !== '00/05') throw new Error(`Unexpected reset progress: ${resetState.progress}`)
 if (resetState.values.some(Boolean)) throw new Error('Reset should clear every field')
 if (!resetState.resetDisabled) throw new Error('Reset button should be disabled after clearing')
+
+const storageAfterReset = await evaluate(`localStorage.getItem('kikumon-question-draft-v1')`)
+if (storageAfterReset !== null) throw new Error('Saved draft should be removed after reset')
 
 const errors = await evaluate(`window.__uiCheckErrors || []`)
 if (errors.length) throw new Error(errors.join('\n'))
